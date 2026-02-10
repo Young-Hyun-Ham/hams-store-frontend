@@ -12,7 +12,7 @@ export default function FcmTokenBox({ userId }: { userId: string }) {
       setMsg("토큰 발급 중...");
       const token = await registerWebFcmToken();
       await saveDevice({ userId, token });
-      setMsg("✅ 알림 설정 완료");
+      setMsg("알림 설정 완료");
     } catch (e: any) {
       setMsg(`❌ ${e.message}`);
     }
