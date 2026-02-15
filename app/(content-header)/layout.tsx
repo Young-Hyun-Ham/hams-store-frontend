@@ -16,7 +16,7 @@ export default function ContentHeaderLayout({ children }: { children: React.Reac
           </Link>
 
           <nav style={{ display: "flex", gap: 8 }}>
-            <Link className="btn" href="/order/3ae31e62-beba-41ed-aeb7-72b4411a9b7c" style={{ textDecoration: "none" }}>
+            <Link className="btn" href="/orders" style={{ textDecoration: "none" }}>
               결재내역
             </Link>
             <Link className="btn" href="/cart" style={{ textDecoration: "none" }}>

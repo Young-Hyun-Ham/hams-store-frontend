@@ -1,4 +1,5 @@
 // lib/api.ts
+import { getOrCreateCustomerId } from "@/lib/customer";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
@@ -14,18 +15,27 @@ export type CreateOrderPayload = {
 };
 
 export async function fetchMenu() {
-  const res = await fetch(`${API_BASE}/menu`)
-  if (!res.ok) throw new Error('menu fetch failed')
-  return res.json()
+  const res = await fetch(`${API_BASE}/menu`);
+  if (!res.ok) throw new Error("menu fetch failed");
+  return res.json();
 }
 
 export async function createOrder(payload: CreateOrderPayload) {
+  // ✅ customerId가 없으면 로컬 저장된 손님 ID를 자동 주입
+  const customerId =
+    payload.customerId && String(payload.customerId).trim()
+      ? String(payload.customerId).trim()
+      : getOrCreateCustomerId();
+
   const res = await fetch(`${API_BASE}/orders`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     // Next.js cache 방지(주문은 항상 최신 요청)
     cache: "no-store",
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      ...payload,
+      customerId,
+    }),
   });
 
   if (!res.ok) {
@@ -45,7 +55,6 @@ export async function createOrder(payload: CreateOrderPayload) {
     created_at: string;
   }>;
 }
-
 
 export async function fetchOrder(orderId: string) {
   const res = await fetch(`${API_BASE}/orders/${orderId}`, {
@@ -92,6 +101,33 @@ export async function fetchOrder(orderId: string) {
       value_key: string;
       value_label: string;
       price_delta: number;
+    }>;
+  }>;
+}
+
+// 결재목록 조회
+export async function fetchOrders(params: { customerId: string; limit?: number }) {
+  const base = process.env.NEXT_PUBLIC_API_BASE_URL!;
+  const qs = new URLSearchParams();
+  qs.set("customerId", params.customerId);
+  qs.set("limit", String(params.limit ?? 30));
+
+  const res = await fetch(`${base}/orders?${qs.toString()}`, {
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`fetchOrders failed: ${res.status} ${t}`);
+  }
+
+  return res.json() as Promise<{
+    orders: Array<{
+      id: string;
+      order_no: string;
+      status: string;
+      total_amount: number;
+      created_at: string;
     }>;
   }>;
 }

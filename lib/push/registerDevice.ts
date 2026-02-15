@@ -1,3 +1,4 @@
+// lib/push/registerDevice.ts
 export async function registerDevice(params: {
   userId: string;
   platform: "web";

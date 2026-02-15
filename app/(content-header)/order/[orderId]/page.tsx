@@ -1,7 +1,6 @@
 // app/(content-header)/order/[orderId]/page.tsx
 "use client";
-
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { fetchOrder } from "@/lib/api";
 
@@ -46,12 +45,64 @@ export default function OrderDetailPage() {
 
   const [data, setData] = useState<Awaited<ReturnType<typeof fetchOrder>> | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+  // 중복 호출/경합 방지용
+  const fetchingRef = useRef(false);
+
+  async function load() {
     if (!orderId) return;
-    fetchOrder(orderId)
-      .then(setData)
-      .catch((e: any) => setErrorMsg(e?.message || "주문 조회 실패"));
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
+
+    setLoading(true);
+    setErrorMsg("");
+
+    try {
+      const next = await fetchOrder(orderId);
+      setData(next);
+    } catch (e: any) {
+      setErrorMsg(e?.message || "주문 조회 실패");
+    } finally {
+      setLoading(false);
+      fetchingRef.current = false;
+    }
+  }
+
+  // 1) 최초 로드
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderId]);
+
+  // 2) PLACED(접수대기) 상태일 때만 폴링 → 접수되면 자동 중단
+  useEffect(() => {
+    if (!data?.order?.status) return;
+    if (data.order.status !== "PLACED") return;
+
+    const t = setInterval(() => {
+      load();
+    }, 3000);
+
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.order?.status, orderId]);
+
+  // 3) 푸시 눌러서 들어오거나, 탭 복귀 시에도 즉시 갱신
+  useEffect(() => {
+    function onFocus() {
+      load();
+    }
+    function onVis() {
+      if (document.visibilityState === "visible") load();
+    }
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
 
   const groupedOptions = useMemo(() => {
@@ -79,6 +130,9 @@ export default function OrderDetailPage() {
               <b>메뉴로 이동</b>
             </div>
             <div className="cart-bar-actions">
+              <button className="cart-btn secondary" onClick={load}>
+                다시 시도
+              </button>
               <button className="cart-btn primary" onClick={() => router.push("/")}>
                 메뉴로 이동
               </button>
@@ -107,13 +161,28 @@ export default function OrderDetailPage() {
           <div className="co-title">주문 상세</div>
           <div className="co-sub">
             주문번호 <b>{order.order_no}</b> · {new Date(order.created_at).toLocaleString("ko-KR")}
+            {loading ? <span style={{ marginLeft: 8, opacity: 0.7 }}>업데이트 중…</span> : null}
           </div>
         </div>
-        <div className={`status-pill ${statusClass(order.status)}`}>
-          {statusLabel(order.status)}
+
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button
+            className="cart-btn secondary"
+            onClick={load}
+            disabled={loading}
+            style={{ padding: "10px 12px" }}
+            aria-label="상태 새로고침"
+          >
+            새로고침
+          </button>
+
+          <div className={`status-pill ${statusClass(order.status)}`}>
+            {statusLabel(order.status)}
+          </div>
         </div>
       </div>
 
+      {/* 이하 기존 그대로 */}
       <div className="co-grid">
         <div className="co-card">
           <h3>주문 내역</h3>

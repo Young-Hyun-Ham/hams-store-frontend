@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
-importScripts("https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js");
-importScripts("https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.12.4/firebase-messaging-compat.js");
 
 firebase.initializeApp({
   apiKey: "<NEXT_PUBLIC_FIREBASE_API_KEY>",

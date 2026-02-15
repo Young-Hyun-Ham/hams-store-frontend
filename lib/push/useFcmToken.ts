@@ -1,15 +1,23 @@
+// lib/push/useFcmToken.ts
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getToken, onMessage } from "firebase/messaging";
 import { getFirebaseMessaging } from "@/lib/firebase/client";
 import { registerDevice } from "@/lib/push/registerDevice";
+import { ensureGuestUser } from "@/lib/user/ensureGuestUser";
 
 export function useFcmToken(userId: string | null) {
   const [token, setToken] = useState<string | null>(null);
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">("default");
+  
+  const ranRef = useRef(false);
 
   useEffect(() => {
+    if (!userId) return;
+    if (ranRef.current) return;
+    ranRef.current = true;
+
     let unsub: (() => void) | null = null;
 
     async function run() {
@@ -41,6 +49,8 @@ export function useFcmToken(userId: string | null) {
       if (!t) return;
 
       setToken(t);
+
+      await ensureGuestUser({ id: userId });
 
       // 백엔드 등록 (이미 너 FastAPI에 구현되어 있음)
       await registerDevice({ userId, platform: "web", fcmToken: t });

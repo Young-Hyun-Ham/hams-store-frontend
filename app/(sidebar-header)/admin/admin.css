@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 관리자에서만 약간의 기본 보정(선택) */
+:root {
+  color-scheme: light;
+}
